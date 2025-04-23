@@ -1,5 +1,7 @@
+import datetime
 import json
 import os
+
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
@@ -132,6 +134,17 @@ def form_ad_submitted(ack, client, body, view, logger):
         client.views_open(trigger_id=trigger, view=modals.ad_exists_error(url, metadata=form_data))
         return
     client.views_open(trigger_id=trigger, view=modals.ad_success())
+
+
+@app.action("section-schedule")
+def view_schedule_base(ack, client, body, logger):
+    ack()
+
+    # get next the 2 weeks starting tmr
+    start_next_week = datetime.date.today() + datetime.timedelta(days=1)
+    week_list = [start_next_week + datetime.timedelta(days=i) for i in range(14)]
+    
+    views.generate_schedule(client, body["user"]["id"], week_list)
 
 
 if __name__ == "__main__":
