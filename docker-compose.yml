@@ -1,0 +1,6 @@
+services:
+  thebillboard:
+    image: thebillboard
+    build:
+      context: .
+      dockerfile: ./Dockerfile
