@@ -5,18 +5,18 @@ def generate_schedule(client, user_id, weeks_avail):
     days_block = []
     for day in weeks_avail:
         days_block.append({
+            "type": "section",
             "text": {
-                "type": "plain_text",
-                    "text": day.strftime("%b %d, %Y"),
-                    "emoji": True
-                },
-                "value": day.strftime("%Y-%m-%d")
+                "type": "mrkdwn",
+                "text": f"*{day.strftime('%b %d, %Y')}*"
             }
-        )
+        })
+        # "value": day.strftime("%Y-%m-%d")
+
     client.views_publish(
         user_id=user_id,
         view={  # pylint: disable=line-too-long
-            "type": "home",
+            "type": "home", 
             "blocks": [
                 {
                     "type": "header",
@@ -40,48 +40,13 @@ def generate_schedule(client, user_id, weeks_avail):
                     "type": "divider"
                 },
                 {
-                    "type": "input",
-                    "element": {
-                        "type": "static_select",
-                        "placeholder": {
-                            "type": "plain_text",
-                            "text": "Feb 30, 2025",
-                            "emoji": True
-                        },
-                        "options": days_block,
-                        "action_id": "static_select-action"
-                    },
-                    "label": {
-                        "type": "plain_text",
-                        "text": "Select a Day",
-                        "emoji": True
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": ":tw_information_source: Tip: Time slots are as follows: 12am-7:59am, 8am to 3:59pm, 4pm to 11:59pm. Options which do not appear below are *taken.* You may book between tomorrow to 14 days inclusive after today."
                     }
                 },
-                {
-                    "type": "context",
-                    "elements": [
-                        {
-                            "type": "plain_text",
-                            "text": "Why not a date selector? Slack won't let me clamp it to certain dates ._.",
-                            "emoji": True
-                        }
-                    ]
-                },
-                {
-                    "type": "actions",
-                    "elements": [
-                        {
-                            "type": "button",
-                            "style": "primary",
-                            "text": {
-                                "type": "plain_text",
-                                "text": ":mag: Search",
-                                "emoji": True
-                            },
-                            "action_id": "section-schedule-date-search"
-                        }
-                    ]
-                }
+                *days_block
             ]
         }
     )

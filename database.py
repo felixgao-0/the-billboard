@@ -92,6 +92,19 @@ class Database:
                 """, (status, ad_id))
                 conn.commit()
 
+    
+    def get_schedule(self, start_epoch: int, end_epoch: int) -> list:
+        """
+        Gets schedules during a time range (for scheduling mainly)
+        """
+        with self.pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT * FROM schedules
+                    WHERE start_epoch >= %s AND end_epoch <= %s;
+                """, (start_epoch, end_epoch))
+                return cur.fetchall()
+
 
     def add_schedule(self, ad_id: int, start_epoch: int, end_epoch: int) -> None:
         """
@@ -104,6 +117,7 @@ class Database:
                     VALUES  (%s, %s, %s)""", (ad_id, start_epoch, end_epoch)
                 )
                 conn.commit()
+
 
 if __name__ == "__main__":
     import os

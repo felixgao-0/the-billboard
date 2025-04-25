@@ -143,7 +143,11 @@ def view_schedule_base(ack, client, body, logger):
     # get next the 2 weeks starting tmr
     start_next_week = datetime.date.today() + datetime.timedelta(days=1)
     week_list = [start_next_week + datetime.timedelta(days=i) for i in range(14)]
-    
+
+    first = datetime.datetime.combine(week_list[0], datetime.time.min)
+    last = datetime.datetime.combine(week_list[-1], datetime.time.max)
+    schedule = db.get_schedule(first.timestamp(), last.timestamp())
+    print(schedule)
     views.generate_schedule(client, body["user"]["id"], week_list)
 
 
