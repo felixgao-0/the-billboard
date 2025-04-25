@@ -1,0 +1,7 @@
+slack_bolt
+validators
+requests
+dotenv
+
+psycopg_pool
+psycopg
