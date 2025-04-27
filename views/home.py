@@ -44,7 +44,7 @@ def generate_dashboard(client, user_id):
                             "type": "button",
                             "text": {
                                 "type": "plain_text",
-                                "text": "View My Ads",
+                                "text": "Your Ads + Scheduling",
                                 "emoji": True
                             },
                             "action_id": "section-view-ads"
@@ -57,15 +57,6 @@ def generate_dashboard(client, user_id):
                                 "emoji": True
                             },
                             "action_id": "section-submit-ad"
-                        },
-                        {
-                            "type": "button",
-                            "text": {
-                                "type": "plain_text",
-                                "text": "View Schedule",
-                                "emoji": True
-                            },
-                            "action_id": "section-schedule"
                         }
                     ]
                 },
@@ -77,7 +68,7 @@ def generate_dashboard(client, user_id):
                     "elements": [
                         {
                             "type": "mrkdwn",
-                            "text": "The Billboard is a community project by Felix Gao. Feedback can be DM'ed to be or sent to #the-billboard-dev (ping me!)."
+                            "text": "The Billboard is a community project by Felix Gao. Feedback can be DM'ed to me or sent to #the-billboard-dev (ping me!)."
                         }
                     ]
                 }
