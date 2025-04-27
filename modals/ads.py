@@ -140,59 +140,7 @@ def upload_ad(*, prefill = None) -> dict:
     }
 
 
-def ad_exists_error(url_in_question: str, *, metadata = '') -> dict:
-    """
-    Ah sucks, the ad already exists lol
-    """
-    return { # pylint: disable=line-too-long
-        "private_metadata": metadata,
-        "title": {
-            "type": "plain_text",
-            "text": "The Billboard",
-            "emoji": True
-        },
-        "type": "modal",
-        "close": {
-            "type": "plain_text",
-            "text": "Exit",
-            "emoji": True
-        },
-        "blocks": [
-            {
-                "type": "header",
-                "text": {
-                    "type": "plain_text",
-                    "text": "Error: URL Already Exists",
-                    "emoji": True
-                }
-            },
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"Oops, so turns out `{url_in_question}` is already an ad? Yea we can't exactly do the same ad twice lol."
-                }
-            },
-            {
-			    "type": "actions",
-	    		"elements": [
-	    			{
-	    				"type": "button",
-	    				"style": "primary",
-	    				"text": {
-	    					"type": "plain_text",
-	    					"text": "Try Again :D",
-	    					"emoji": True
-	    				},
-	    				"action_id": "section-submit-ad-fix"
-	    			}
-	    		]
-	    	}
-        ]
-    }
-
-
-def ad_invalid_url_error(url_in_question: str, *, metadata = '') -> dict:
+def ad_gen_error(error_title: str, error_desc: str, *, metadata = '') -> dict:
     """
     Informs the user their link sucks
     """
@@ -214,7 +162,7 @@ def ad_invalid_url_error(url_in_question: str, *, metadata = '') -> dict:
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Error: Invalid URL",
+                    "text": f"Error: {error_title}",
                     "emoji": True
                 }
             },
@@ -222,7 +170,7 @@ def ad_invalid_url_error(url_in_question: str, *, metadata = '') -> dict:
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"Oops, so turns out `{url_in_question}` isn't a valid URL. Go check up on that link and fix it :D."
+                    "text": error_desc
                 }
             },
             {
