@@ -1,10 +1,13 @@
 """
 Rotates a new ad in at set times
+Run via cron job
 """
+
 import os
 import sys
+import time
 from slack_sdk import WebClient
-#from slack_sdk.errors import SlackApiError
+from slack_sdk.errors import SlackApiError
 
 from dotenv import load_dotenv
 from database import Database
@@ -19,59 +22,90 @@ db_conn_params = {
     "port": 5432
 }
 
-CHANNEL_ID = "C08NU78MR4G"  # the-billboard-DEV
+#BOT_ID = os.environ.get("BOT_ID")
+ADMINS = os.environ.get("ADMINS").split(",") if os.environ.get("ADMINS") else []
+AUTHORIZED = os.environ.get("AUTHORIZED").split(",") if os.environ.get("AUTHORIZED") else []
 
-# a giant try-except to display error blocks
+CHANNEL_ID = "C08MRG6NK1V"  # the-billboard
+#CHANNEL_ID = "C08NU78MR4G"  # the-billboard-DEV
+
+try:
+    client = WebClient(token=os.environ['BILLBOARD_BOT_TOKEN'])
+    user_client = WebClient(token=os.environ['BILLBOARD_USERBOT_TOKEN'])
+except SlackApiError as e:
+    print(f"Error: {e}")
+    sys.exit(1)
+
+try:
+    response = client.conversations_history(channel=CHANNEL_ID)
+    messages = response["messages"]
+
+    channel_info = client.conversations_info(channel=CHANNEL_ID)
+    if not channel_info["channel"]["creator"] == "U07BU2HS17Z":
+        raise ValueError("MISSION ABORT, MISSION ABORT. Channel manager safeguard triggered.")
+    
+    if CHANNEL_ID not in ['C08MRG6NK1V', 'C08NU78MR4G']:
+        raise ValueError("MISSION ABORT, MISSION ABORT. Channel ID safeguard triggered.")
+
+    for msg in messages:
+        ts = msg["ts"]
+        user = msg["user"]
+        if user in (ADMINS + AUTHORIZED):
+            continue
+
+        user_client.chat_delete(channel=CHANNEL_ID, ts=ts)
+        time.sleep(0.1)  # rate limiting lolies
+
+except SlackApiError as e:
+    print(f"Error: {e}")
+
 try:
     db = Database(**db_conn_params)
     client = WebClient(token=os.environ['BILLBOARD_BOT_TOKEN'])
 
-    ads = db.get_ad(current_timestamp=505)  # FIXME: Change to proper timestamp with time.time()
-    # [(1, 'user-id', 'text', 'img', 'alt', 'cta')]
+    ads = db.get_ad(current_timestamp=time.time())  # FIXME: Change to proper timestamp with time.time()
+    # [('id', 'user-id', 'text', 'img', 'alt', 'cta')]
 
     if not ads:
         print("nothin")
         sys.exit() # TODO: no ads avail prompts here
 
     ad_blocks = []
-    for i, ad in enumerate(ads): # TODO PLS FIXME: use list.extend(), move alt text pos
-        ad_blocks.append({
+    for i, ad in enumerate(ads):
+        ad_blocks.extend([{
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": ad[2]
             }
-        })
-
-        ad_blocks.append({
+        }, {
             "type": "image",
             "image_url": ad[3],
             "alt_text": ad[4]
-        })
-        ad_blocks.append({
+        }, {
             "type": "section",
             "text": {
                 "type": "mrkdwn",
                 "text": f"{ad[5]} • Posted by <@{ad[1]}>"
             }
-        })
+        }, {
+            "type": "context",
+             "elements": [{
+                "text": f"Alt Text {i+1}: _{ad[4]}_" if len(ads) > 1 else f"Alt Text: _{ad[4]}_",
+                "type": "mrkdwn"
+            }]
+        }
+        ])
         if i != len(ads) - 1 and len(ads) > 1:
             ad_blocks.append({"type": "divider"})
 
-        ad_blocks.append({
-            "type": "context",
-             "elements": {
-                "text": f"Alt Text {i+1}: _{ad[4]}_" if len(ads) > 1 else f"Alt Text: _{ad[4]}_",
-                "type": "mrkdwn"
-            }
-        })
-
     client.chat_postMessage(
         channel=CHANNEL_ID,
-        text='Insert text here later trust', # FIXME: Add text here
+        text='A new billboard ad has dropped :D',
         blocks=ad_blocks,
     )
 except Exception as e: # pylint: disable=broad-except
+    print(f"Error: {e}")
     client.chat_postMessage(
         channel=CHANNEL_ID,
         text="The billboard has run into an error :c",
@@ -98,18 +132,5 @@ except Exception as e: # pylint: disable=broad-except
             }
         ]
     )
-
-"""
-try:
-    response = client.conversations_history(channel=channel_id)
-    messages = response["messages"]
-
-    for msg in messages:
-        ts = msg["ts"]
-        client.chat_delete(channel=channel_id, ts=ts)
-        time.sleep(0.5)  # rate limiting
-
-    print("Channel cleared.")
-except SlackApiError as e:
-    print(f"Error: {e.response['error']}")
-"""
+finally:
+    db.pool.close()
