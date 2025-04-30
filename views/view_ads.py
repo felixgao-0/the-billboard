@@ -27,7 +27,7 @@ def generate_view_ads(client, user_id, ads) -> dict:
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"{ad[5]} • *STATUS: {ad[6]}*"
+                "text": f"{ad[5]} • *STATUS: {ad[6]}* • ID: *{ad[0]}*"
             }
         }, {
 			"type": "context",
@@ -38,6 +38,22 @@ def generate_view_ads(client, user_id, ads) -> dict:
 				}
 			]
 		}])
+        if ad[6] == "APPROVED":
+            ad_blocks.append({
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": ":calendar: Schedule Ad",
+						"emoji": True
+					},
+                    "value": f"{ad[0]}",
+					"action_id": f"schedule-ad-{i}",
+				}
+			]
+		})
         if i != len(ads) - 1 and len(ads) > 1:
             ad_blocks.append({"type": "divider"})
 
