@@ -86,9 +86,9 @@ class Database:
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    UPDATE ads
+                    UPDATE approvals
                     SET status = %s
-                    WHERE id = %s;
+                    WHERE ad_id = %s;
                 """, (status, ad_id))
                 conn.commit()
 
@@ -121,6 +121,11 @@ class Database:
 
 if __name__ == "__main__":
     import os
+    import datetime
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
 
     db_conn_params = {
         "dbname": "felixgao_the_billboard",
@@ -131,3 +136,11 @@ if __name__ == "__main__":
     }
 
     db = Database(**db_conn_params)
+    # 5 7 8 9
+    start = datetime.datetime.combine(datetime.datetime.today(), datetime.time(0,0))
+    end = datetime.datetime.combine(datetime.datetime.today(), datetime.time(10,0))
+
+    db.add_schedule(4, start.timestamp(), end.timestamp())
+    #print(e)
+
+    db.pool.close()
