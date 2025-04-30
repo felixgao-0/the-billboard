@@ -1,3 +1,5 @@
+from datetime import datetime
+
 def generate_schedule(client, user_id, weeks_avail):
     """
     Scheduling! :yay:
@@ -8,9 +10,25 @@ def generate_schedule(client, user_id, weeks_avail):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*{day.strftime('%b %d, %Y')}*"
+                "text": f"*{day['day'].strftime('%b %d, %Y')}*"
             }
         })
+        slots_block = []
+        for i, slot in enumerate(day['slots']):
+            slots_block.append({
+				"type": "button",
+				"text": {
+					"type": "plain_text",
+					"text": f"{slot[0].strftime('%I:%M %p')} - {slot[1].strftime('%I:%M %p')}",
+					"emoji": True
+				},
+				"value": f"{datetime.combine(day['day'], slot[0]).timestamp()}", # Uhhhhh will this work?
+				"action_id": f"schedule-time-select-{i}"
+				})
+        days_block.append({
+			"type": "actions",
+			"elements": slots_block
+		})
         # "value": day.strftime("%Y-%m-%d")
 
     client.views_publish(
