@@ -147,8 +147,8 @@ def form_ad_submitted(ack, client, body, view, logger):
     ack()
     form = view["state"]["values"]
     # preserve the original url for error message reasons
-    # TODO: Strip the leading / + whitespace from the url
-    formatted_url, url = (form["ad-img"]["ad-img"]["value"],)*2 # *2 is goofy lol
+    # TODO: Strip the leading / from the url
+    formatted_url, url = (form["ad-img"]["ad-img"]["value"].strip(),)*2 # *2 is goofy lol
     if not (url.startswith("https://") or url.startswith("http://")):
         formatted_url = "https://" + url # attempt to fix missing protocol via duct tape
 
@@ -177,7 +177,7 @@ def form_ad_submitted(ack, client, body, view, logger):
         return
 
     try:
-        db.add_ad(
+        ad_item_id = db.add_ad(
             slack_id=body["user"]["id"],
             ad_text=form["ad-text"]["ad-text"]["value"],
             ad_img=formatted_url,
@@ -187,6 +187,7 @@ def form_ad_submitted(ack, client, body, view, logger):
     except ValueError:
         client.views_open(trigger_id=trigger, view=modals.ad_gen_error("Image Already Exists", f"This URL (`{url}`) alrady exists in a DB that hates twins :c. Go make your ad unique!", metadata=form_data))
         return
+    db.add_approval_setup(ad_item_id)
     client.views_open(trigger_id=trigger, view=modals.ad_success())
 
 

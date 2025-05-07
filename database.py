@@ -70,7 +70,29 @@ class Database:
                 try:
                     cur.execute("""
                         INSERT INTO ads (user_id, ad_text, ad_img, ad_alt, ad_cta, status)
-                        VALUES  (%s, %s, %s, %s, %s, %s)""", (slack_id, ad_text, ad_img, ad_alt, ad_cta, status)
+                        VALUES  (%s, %s, %s, %s, %s, %s)
+                        RETURNING id""", (slack_id, ad_text, ad_img, ad_alt, ad_cta, status)
+    
+                    )
+                except psycopg.errors.UniqueViolation:
+                    raise ValueError("Ad already exists in the database") from None
+                result = cur.fetchone()[0]
+                conn.commit()
+        return result
+
+    def add_approval_setup(self, ad_id: int) -> None:
+        """
+        Hi I heard you wanted your ad approved!
+
+        DOES NOT APPROVE THE AD, JUST SETS IT UP FOR APPROVAL
+        :param ad_id: The ad ID to set as pending
+        """
+        with self.pool.connection() as conn:
+            with conn.cursor() as cur:
+                try:
+                    cur.execute("""
+                        INSERT INTO approvals (ad_id, status, reason, objectable)
+                        VALUES  (%s, %s, %s, %s)""", (ad_id, "PENDING", "Ad uploaded.", True)
                     )
                 except psycopg.errors.UniqueViolation:
                     raise ValueError("Ad already exists in the database") from None
