@@ -43,8 +43,8 @@ try:
     channel_info = client.conversations_info(channel=CHANNEL_ID)
     if not channel_info["channel"]["creator"] == "U07BU2HS17Z":
         raise ValueError("MISSION ABORT, MISSION ABORT. Channel manager safeguard triggered.")
-    
-    if CHANNEL_ID not in ['C08MRG6NK1V', 'C08NU78MR4G']:
+
+    if CHANNEL_ID not in ['C08MRG6NK1V']:
         raise ValueError("MISSION ABORT, MISSION ABORT. Channel ID safeguard triggered.")
 
     for msg in messages:
@@ -63,7 +63,7 @@ try:
     db = Database(**db_conn_params)
     client = WebClient(token=os.environ['BILLBOARD_BOT_TOKEN'])
 
-    ads = db.get_ad(current_timestamp=time.time())  # FIXME: Change to proper timestamp with time.time()
+    ads = db.get_ad(current_timestamp=time.time())
     # [('id', 'user-id', 'text', 'img', 'alt', 'cta')]
 
     if not ads:
