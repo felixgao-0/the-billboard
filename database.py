@@ -23,12 +23,13 @@ class Database:
         )
 
 
-    def get_ad(self, *, current_timestamp: Optional[int] = None, ad_url: Optional[str] = None, user_id: Optional[str] = None) -> list:
+    def get_ad(self, *, current_timestamp: Optional[int] = None, ad_url: Optional[str] = None, 
+               user_id: Optional[str] = None, status: Optional[str] = None) -> list:
         """
         Yoinks an ad to shove in everyone's face against their will
         """
-        if not ad_url and not current_timestamp and not user_id:
-            raise ValueError("Either ad_url or current_timestamp must be provided bruh")
+        if not ad_url and not current_timestamp and not user_id and not status:
+            raise ValueError("One of these params must be provided bruh")
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 if ad_url:
@@ -50,11 +51,25 @@ class Database:
                         WHERE user_id = %s;
                     """, (user_id,)
                     )
+                elif status:
+                    cur.execute("""
+                        SELECT * FROM ads
+                        WHERE EXISTS (
+                            SELECT 1
+                            FROM approvals a
+                            WHERE a.ad_id = ads.id
+                            AND a.id = (
+                                SELECT MAX(id)
+                                FROM approvals
+                                WHERE ad_id = ads.id
+                            )
+                            AND a.status = %s
+                        );
+                    """, (status,))
                 return cur.fetchall()
 
 
-    def add_ad(self, slack_id: str, ad_text: str, ad_img: str, 
-               ad_alt: str, ad_cta: str, *, status: str = 'PENDING') -> None:
+    def add_ad(self, slack_id: str, ad_text: str, ad_img: str, ad_alt: str, ad_cta: str) -> None:
         """
         Adds an ad to the database
 
@@ -63,16 +78,14 @@ class Database:
         :param ad_img: The ad image itself
         :param ad_alt: Ad alt text
         :param ad_cta: The call to action
-        :param status: The status of the ad (default: PENDING)
         """
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 try:
                     cur.execute("""
-                        INSERT INTO ads (user_id, ad_text, ad_img, ad_alt, ad_cta, status)
-                        VALUES  (%s, %s, %s, %s, %s, %s)
-                        RETURNING id""", (slack_id, ad_text, ad_img, ad_alt, ad_cta, status)
-    
+                        INSERT INTO ads (user_id, ad_text, ad_img, ad_alt, ad_cta)
+                        VALUES  (%s, %s, %s, %s, %s)
+                        RETURNING id""", (slack_id, ad_text, ad_img, ad_alt, ad_cta)
                     )
                 except psycopg.errors.UniqueViolation:
                     raise ValueError("Ad already exists in the database") from None
@@ -89,17 +102,14 @@ class Database:
         """
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                try:
-                    cur.execute("""
-                        INSERT INTO approvals (ad_id, status, reason, objectable)
-                        VALUES  (%s, %s, %s, %s)""", (ad_id, "PENDING", "Ad uploaded.", True)
-                    )
-                except psycopg.errors.UniqueViolation:
-                    raise ValueError("Ad already exists in the database") from None
+                cur.execute("""
+                    INSERT INTO approvals (ad_id, status, reason, objectable)
+                    VALUES  (%s, %s, %s, %s)""", (ad_id, "PENDING", "Ad uploaded.", True)
+                )
                 conn.commit()
 
 
-    def change_ad_status(self, ad_id: int, status: str) -> None:
+    def add_ad_status(self, ad_id: int, status: str, reason="No reason provided.", objectable=True) -> None:
         """
         Set an ad's status to whatever
 
@@ -108,13 +118,12 @@ class Database:
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    UPDATE approvals
-                    SET status = %s
-                    WHERE ad_id = %s;
-                """, (status, ad_id))
+                    INSERT INTO approvals (ad_id, status, reason, objectable)
+                    VALUES (%s, %s, %s, %s)""", (ad_id, status, reason, objectable)
+                )
                 conn.commit()
 
-    
+
     def get_schedule(self, start_epoch: int, end_epoch: int) -> list:
         """
         Gets schedules during a time range (for scheduling mainly)
