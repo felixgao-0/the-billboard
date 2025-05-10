@@ -1,7 +1,27 @@
-def generate_dashboard(client, user_id):
+def generate_dashboard(client, user_id, *, admin: bool = False):
     """
     Dashboard view function.
     """
+    if admin:
+        admin_blocks = [
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Approval Wizard",
+                            "emoji": True
+                        },
+                        "action_id": "section-approval-wizard"
+                    },
+                ]
+            }
+        ]
+    else:
+        admin_blocks = []
+
     client.views_publish(
         user_id=user_id,
         view={ # pylint: disable=line-too-long
@@ -60,6 +80,7 @@ def generate_dashboard(client, user_id):
                         }
                     ]
                 },
+                *admin_blocks,
                 {
                     "type": "divider"
                 },
