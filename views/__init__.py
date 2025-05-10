@@ -3,3 +3,4 @@ from .boards import *
 from .view_ads import *
 from .scheduling import *
 from .loading import *
+from .approvals import *
