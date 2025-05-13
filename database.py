@@ -1,5 +1,7 @@
 """
-Database for handling random things which need to be stored lol
+Database for handling random ad junk which needs to be stored lol
+
+Yes I know a lot of this is jank, do let me know if you have a solution (please save me)
 """
 import time
 from typing import Optional
@@ -23,20 +25,28 @@ class Database:
         )
 
 
-    def get_ad(self, *, current_timestamp: Optional[int] = None, ad_url: Optional[str] = None, 
-               user_id: Optional[str] = None, status: Optional[str] = None) -> list:
+    def get_ad(self, *, current_timestamp: Optional[int] = None,
+               param: Optional[list[str, str]] = None, status: Optional[str] = None) -> list:
         """
         Yoinks an ad to shove in everyone's face against their will
         """
-        if not ad_url and not current_timestamp and not user_id and not status:
+        if not current_timestamp and not param and not status: # permission, not forgiveness
             raise ValueError("One of these params must be provided bruh")
         with self.pool.connection() as conn:
             with conn.cursor() as cur:
-                if ad_url:
-                    cur.execute("""
-                        SELECT * FROM ads
-                        WHERE ad_img = %s;
-                    """, (ad_url,)
+                if param:
+                    # !!!! README: THIS IS SAFE !!!!
+                    # Only this code controls param[0], so no risk of SQL injection
+                    cur.execute(f"""
+                        SELECT ads.*, approvals.status FROM ads
+                        JOIN approvals ON approvals.ad_id = ads.id
+                        WHERE ads.{param[0]} = %s
+                        AND approvals.id = ( -- get the latest approval for this ad
+                            SELECT MAX(approvals.id)
+                            FROM approvals
+                            WHERE ad_id = ads.id
+                        );
+                    """, (param[1],)
                     )
                 elif current_timestamp:
                     cur.execute("""
@@ -45,27 +55,16 @@ class Database:
                         WHERE %s BETWEEN schedules.start_epoch AND schedules.end_epoch;
                     """, (current_timestamp,)
                     )
-                elif user_id:
-                    cur.execute("""
-                        SELECT * FROM ads
-                        WHERE user_id = %s;
-                    """, (user_id,)
-                    )
+
                 elif status:
                     cur.execute("""
                         SELECT * FROM ads
                         WHERE EXISTS (
-                            SELECT 1
-                            FROM approvals a
-                            WHERE a.ad_id = ads.id
-                            AND a.id = (
-                                SELECT MAX(id)
-                                FROM approvals
-                                WHERE ad_id = ads.id
-                            )
+                            SELECT 1 FROM approvals a WHERE a.ad_id = ads.id
+                            AND a.id = (SELECT MAX(id) FROM approvals WHERE ad_id = ads.id)
                             AND a.status = %s
                         );
-                    """, (status,))
+                    """, (status,)) # check for staus = whatever
                 return cur.fetchall()
 
 
@@ -167,11 +166,12 @@ if __name__ == "__main__":
     }
 
     db = Database(**db_conn_params)
-    # 5 7 8 9
-    start = datetime.datetime.combine(datetime.datetime.today(), datetime.time(0,0))
-    end = datetime.datetime.combine(datetime.datetime.today(), datetime.time(10,0))
+    e = db.get_ad(param=['id',10])
+    # # 5 7 8 9
+    # start = datetime.datetime.combine(datetime.datetime.today(), datetime.time(0,0))
+    # end = datetime.datetime.combine(datetime.datetime.today(), datetime.time(10,0))
 
-    db.add_schedule(4, start.timestamp(), end.timestamp())
-    #print(e)
+    # db.add_schedule(4, start.timestamp(), end.timestamp())
+    print(e)
 
     db.pool.close()
