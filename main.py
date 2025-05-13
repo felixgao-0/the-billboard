@@ -1,3 +1,4 @@
+import atexit
 import datetime
 import json
 import os
@@ -16,7 +17,7 @@ import database
 import views
 import modals
 
-load_dotenv()
+load_dotenv(dotenv_path='./.env', override=True)
 
 app = App(token=os.environ["BILLBOARD_BOT_TOKEN"])
 user_client = WebClient(token=os.environ['BILLBOARD_USERBOT_TOKEN'])
@@ -76,12 +77,13 @@ def render_home_tab(ack, client, user_id, logger):
     Renders the home tab
     """
     ack()
-    if os.environ.get("DEV") == "true" and (user_id not in ADMINS and user_id not in AUTHORIZED):
+
+    if os.environ.get("DEV") == "true" and user_id not in (ADMINS + AUTHORIZED):
         views.generate_unauthorized(client, user_id)
         logger.warning(f"{user_id} is unauthorized :c")
         return
 
-    views.generate_dashboard(client, user_id)
+    views.generate_dashboard(client, user_id, admin=(user_id in (ADMINS)))
 
 
 @app.event("app_home_opened")
@@ -114,7 +116,7 @@ def view_ads_modal(ack, client, body, logger):
     ack()
     views.generate_loading(client, body["user"]["id"])
 
-    ads = db.get_ad(user_id=body["user"]["id"])
+    ads = db.get_ad(param=['user_id', body["user"]["id"]])
     views.generate_view_ads(client, body["user"]["id"], ads)
 
 
@@ -198,21 +200,18 @@ def schedule_event(ack, client, body, logger):
     """
     ack()
     value = body["actions"][0].get("selected_option", {}).get("value")
-    
-    start = time.time() # FIXME: timer, DELETE BEFORE PROD PLS
+
+    start_time = time.time() # FIXME: timer, DELETE BEFORE PROD PLS
     views.generate_loading(client, body["user"]["id"])
 
     # get next the 2 weeks starting tmr
-    start_next_week = datetime.date.today() + datetime.timedelta(days=1)
-    week_list = [start_next_week + datetime.timedelta(days=i) for i in range(14)]
+    week_list = [datetime.date.today() + datetime.timedelta(days=1) + datetime.timedelta(days=i) for i in range(14)]
 
-    first = datetime.datetime.combine(week_list[0], datetime.time.min)
-    last = datetime.datetime.combine(week_list[-1], datetime.time.max)
-    db_schedule = db.get_schedule(first.timestamp(), last.timestamp()) # get entire week range
-    taken_time_ranges = []
-
-    for schedule in db_schedule:
-        taken_time_ranges.append((schedule[2], schedule[3]))
+    db_schedule = db.get_schedule(
+        datetime.datetime.combine(week_list[0], datetime.time.min).timestamp(),
+        datetime.datetime.combine(week_list[-1], datetime.time.max).timestamp()
+    ) # get entire week range
+    taken_time_ranges = [(schedule[2], schedule[3]) for schedule in db_schedule]
 
     schedule = []
     for day in week_list: # for everything in the next 2 weeks
@@ -228,10 +227,70 @@ def schedule_event(ack, client, body, logger):
             })
 
     views.generate_schedule(client, body["user"]["id"], schedule)
-    end = time.time()
-    print(f"Schedule took {end - start} seconds")
+    print(f"Schedule took {time.time() - start_time} seconds")
 
+
+@app.action("section-approval-wizard")
+def view_approval_wizard(ack, client, body, logger):
+    """
+    *We learned lessons from prox2... don't let creativty run free.*
+    Approval wizard for admins!
+    """
+    ack()
+    views.generate_loading(client, body["user"]["id"])
+    ads_pending = db.get_ad(status="PENDING")
+    views.generate_approval_wizard(client, body["user"]["id"], ads_pending)
+
+
+@app.action("ad-approve")
+@app.action("ad-reject")
+@app.action("ad-reject-final")
+def wizard_actions(ack, client, body, logger):
+    """
+    Handles the ad approval wizard actions
+    """
+    ack()
+    action = body["actions"][0]["action_id"]
+    readable = { # a morre readable version of the action
+        "ad-approve": "approve",
+        "ad-reject": "reject",
+        "ad-reject-final": "*unappealable* reject"
+    }
+
+    ad = db.get_ad(param=['id',body["actions"][0]["value"]])
+    warning_needed = ad[0][7] != "PENDING"
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view=modals.confirmation_form(readable[action], action, ad[0], warning_prompt=warning_needed)
+    )
+
+
+@app.view("submit-wizard-action")
+def wizard_action_submitted(ack, client, body, logger):
+    """
+    Handles the ad approval wizard action
+    """
+    ack()
+    print(body)
+    metadata = body["view"]["private_metadata"].split("=")
+    print(metadata)
+    ad = db.get_ad(param=['id',metadata[0]])
+    formatting = {
+        "ad-approve": ["APPROVED", False], # value of appealable doesn't matter for approval
+        "ad-reject": ["REJECTED", True],
+        "ad-reject-final": ["REJECTED", False]
+    }
+    action_to_take = formatting[metadata[1]]
+
+    if not metadata[2] == ad[0][7]: # oh no a mismatch
+        return # TODO: Add confirmation modal incase of race-like condition :p
+    db.add_ad_status(ad[0][0], action_to_take[0], 'none', action_to_take[1]) # FIXME: add reason
+    
+    #reload
+    views.generate_approval_wizard(client, body["user"]["id"], ads=db.get_ad(status="PENDING"))
 
 if __name__ == "__main__":
+    atexit.register(db.pool.close) # close db afterwards cause otherwise py mad
+
     handler = SocketModeHandler(app, os.environ["BILLBOARD_APP_TOKEN"])
     handler.start()
