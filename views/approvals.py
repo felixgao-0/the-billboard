@@ -40,7 +40,7 @@ def generate_approval_wizard(client, user_id, ads) -> dict:
                         "emoji": True
                     },
                     "action_id": "ad-approve",
-                    "value": f"{ad[0]}-PENDING"
+                    "value": f"{ad[0]}"
                 },
                 {
                     "type": "button",
@@ -50,7 +50,7 @@ def generate_approval_wizard(client, user_id, ads) -> dict:
                         "emoji": True
                     },
                     "action_id": "ad-reject",
-                    "value": f"{ad[0]}-PENDING"
+                    "value": f"{ad[0]}"
                 },
                         {
                     "type": "button",
@@ -60,7 +60,7 @@ def generate_approval_wizard(client, user_id, ads) -> dict:
                         "emoji": True
                     },
                     "action_id": "ad-reject-final",
-                    "value": f"{ad[0]}-PENDING"
+                    "value": f"{ad[0]}"
                 }
             ]
         }])
