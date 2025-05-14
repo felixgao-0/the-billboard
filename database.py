@@ -3,7 +3,6 @@ Database for handling random ad junk which needs to be stored lol
 
 Yes I know a lot of this is jank, do let me know if you have a solution (please save me)
 """
-import time
 from typing import Optional
 from urllib.parse import quote_plus
 
@@ -36,9 +35,9 @@ class Database:
             with conn.cursor() as cur:
                 if param:
                     # !!!! README: THIS IS SAFE !!!!
-                    # Only this code controls param[0], so no risk of SQL injection
+                    # No user input controls param[0], so no risk of SQL injection
                     cur.execute(f"""
-                        SELECT ads.*, approvals.status FROM ads
+                        SELECT ads.*, approvals.status, approvals.objectable FROM ads
                         JOIN approvals ON approvals.ad_id = ads.id
                         WHERE ads.{param[0]} = %s
                         AND approvals.id = ( -- get the latest approval for this ad
@@ -55,7 +54,6 @@ class Database:
                         WHERE %s BETWEEN schedules.start_epoch AND schedules.end_epoch;
                     """, (current_timestamp,)
                     )
-
                 elif status:
                     cur.execute("""
                         SELECT * FROM ads
@@ -65,6 +63,21 @@ class Database:
                             AND a.status = %s
                         );
                     """, (status,)) # check for staus = whatever
+                return cur.fetchall()
+
+
+    def get_ad_approvals(self, ad_id: int) -> list:
+        """
+        Gets the ad approvals for a specific ad
+        """
+        with self.pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT * FROM approvals
+                    WHERE ad_id = %s
+                    ORDER BY id DESC;
+                """, (ad_id,)
+                )
                 return cur.fetchall()
 
 
