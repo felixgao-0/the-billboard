@@ -109,3 +109,40 @@ def confirmation_form(action_human_readable, action, ad, *, warning_prompt: bool
             *warning_prompt_block
         ]
     }
+
+
+def wizard_warning(status, objectable) -> dict:
+    """
+    What have you done?
+    Warning modal for the wizard
+    """
+    return { # pylint: disable=line-too-long
+        "type": "modal",
+        "title": {
+            "type": "plain_text",
+            "text": "Database Chaos Ahread",
+            "emoji": True
+        },
+        "close": {
+            "type": "plain_text",
+            "text": "Cancel",
+            "emoji": True
+        },
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"This ad's status is mismatched with your version. The ad is currently set to `{status.upper()}` (Objectable: {objectable}). Reload your wizard and try again if applicable. *You may not proceed* (the database might be screwed if you do)."
+                }
+            },
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": ":stop:, think, and then proceed.",
+                    "emoji": True
+                }
+            }
+        ]
+    }

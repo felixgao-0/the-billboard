@@ -271,9 +271,8 @@ def wizard_action_submitted(ack, client, body, logger):
     Handles the ad approval wizard action
     """
     ack()
-    print(body)
+    views.generate_loading(client, body["user"]["id"])
     metadata = body["view"]["private_metadata"].split("=")
-    print(metadata)
     ad = db.get_ad(param=['id',metadata[0]])
     formatting = {
         "ad-approve": ["APPROVED", False], # value of appealable doesn't matter for approval
@@ -283,11 +282,25 @@ def wizard_action_submitted(ack, client, body, logger):
     action_to_take = formatting[metadata[1]]
 
     if not metadata[2] == ad[0][7]: # oh no a mismatch
-        return # TODO: Add confirmation modal incase of race-like condition :p
-    db.add_ad_status(ad[0][0], action_to_take[0], 'none', action_to_take[1]) # FIXME: add reason
-    
-    #reload
+        client.views_update(
+            view_id=body["container"]['view_id'],
+            view=modals.wizard_warning(ad[0][7], ad[0][8])
+        )
+    else:
+        try: # option field, so may not exist :p
+            reason = body['view']['state']['values']['reasoning']['reasoning']['value']
+        except KeyError:
+            reason = None
+
+        # and let the user know what we've done
+        user_dm_id = client.conversations_open(users=ad[0][1])["channel"]["id"]
+        client.chat_postMessage(channel=user_dm_id, text=f"Your ad has been reviwed and set to `{action_to_take[0]}`. Reason: `{reason}`")
+
+        db.add_ad_status(ad[0][0], action_to_take[0], reason, action_to_take[1])
+    # and now we reload to display new changes
     views.generate_approval_wizard(client, body["user"]["id"], ads=db.get_ad(status="PENDING"))
+
+
 
 if __name__ == "__main__":
     atexit.register(db.pool.close) # close db afterwards cause otherwise py mad
