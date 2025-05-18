@@ -125,3 +125,67 @@ def generate_approval_wizard(client, user_id, ads) -> dict:
             ]
         }
     )
+
+
+def approval_message(ad: list, status: str, reasoning: str, objectable: bool) -> dict:
+    """
+    Tell the user what happpened to their poor ad
+    """
+    status_formatted = f"Status: *`{status}`*"
+    if status.upper() == "REJECTED":
+        if not objectable:
+            status_formatted += " _(You *cannot* appeal this decision)_" 
+        else:
+            status_formatted += " _(You may appeal this by resubmitting the ad)_"
+    return [ # pylint: disable=line-too-long
+        {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": "Your ad has been reviewed :D! Look below for the ad contents reviewed and its status.",
+                "emoji": True
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": ad[2]
+            }
+        },
+        {
+            "type": "image",
+            "image_url": ad[3],
+            "alt_text": ad[4]
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"{ad[5]} • ID: {ad[0]}"
+            }
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": status_formatted
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Attached reasoning:* \n>{reasoning}"
+            }
+        }
+    ]
