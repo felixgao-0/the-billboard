@@ -294,7 +294,11 @@ def wizard_action_submitted(ack, client, body, logger):
 
         # and let the user know what we've done
         user_dm_id = client.conversations_open(users=ad[0][1])["channel"]["id"]
-        client.chat_postMessage(channel=user_dm_id, text=f"Your ad has been reviwed and set to `{action_to_take[0]}`. Reason: `{reason}`")
+        client.chat_postMessage(
+            channel=user_dm_id, 
+            text=f"Your ad has been reviwed and set to `{action_to_take[0]}`, why? `{reason}`",
+            blocks=views.approval_message(ad[0], action_to_take[0], reason, action_to_take[1])
+            )
 
         db.add_ad_status(ad[0][0], action_to_take[0], reason, action_to_take[1])
     # and now we reload to display new changes
