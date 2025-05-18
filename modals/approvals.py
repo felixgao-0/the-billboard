@@ -120,7 +120,7 @@ def wizard_warning(status, objectable) -> dict:
         "type": "modal",
         "title": {
             "type": "plain_text",
-            "text": "Database Chaos Ahread",
+            "text": "Database Chaos Ahead",
             "emoji": True
         },
         "close": {
